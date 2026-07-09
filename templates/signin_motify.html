@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        .title {
+            font-size: 45px;
+            text-align: center;
+            text-orientation: upright;
+            writing-mode: vertical-lr;
+            font-style: italic;
+            color:  #f2ca2a;
+        }
+
+        .hide {
+            display: none;
+        }
+
+        .title_area {
+            width: 20%;
+            height: 100%;
+            background: linear-gradient(135deg, #37454c, #29313b, #000000);
+
+         }
+
+        .button_login {
+            border: solid 2px black;
+        }
+
+        .button_login {
+            padding: 15px 40px;
+            background-color: #181918;
+            color: #e6b445;
+            font-size: 20px;
+        }
+
+        #night {
+            display: none;
+        }
+
+        .night {
+            padding: 10px 20px;
+            border: solid 1px #e6b445;
+            border-radius: 5px;
+            background-color: #181918;
+            color: #e6b445;
+            position: absolute;
+            top: 0;
+            right: 0;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .night:hover {
+            background: linear-gradient(135deg, #efa40d, #fed940, #ee9d02);
+            color: black;
+
+        }
+
+        html{
+            background-color: black;
+        }
+        .page {
+            background-color: #a7adaf;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100vh;
+            font-weight: bold;
+            font-size: 20px;
+            transition: 0.5s;
+
+        }
+        .button_login {
+            padding: 15px 40px;
+            background-color: #181918;
+            color: #e6b445;
+            font-size: 20px;
+            border: 2px solid #e6b445;
+            cursor: pointer;
+            border-radius: 20px;
+        }
+        .button_login:hover {
+            background: linear-gradient(135deg, #efa40d, #fed940, #ee9d02);
+            color: black;
+        }
+
+        .signin{
+            margin: 20px;
+            color: #e6b445;
+        }
+        .button_signin{
+            font-size: 0.8em;
+            background: none;
+            border: none;
+            outline: none;
+            color: #e6b445;
+            transition: 0.3s;
+        }
+        .button_signin:hover{
+            text-shadow: 0px 0px 10px#e6b445,0px 0px 10px #e6b445;
+            transform: translateY(-5px);
+            transition: 0.3s;
+        }
+        .alert { background: rgba(239, 68, 68, 0.15);
+            color: #fecaca;
+            border: 1px solid #ef4444;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 14px; 
+            font-size: 14px; }
+    </style>
+</head>
+
+<body>
+    <input type="submit" id="nightMod" class="night" value="🌛">
+    <div id="pageMotify">
+
+        <form id="form" action="/signin" method="post">
+            <div class="title_area">
+                <h1 class="title">SIGN IN</h1>
+            </div>
+            <div id="areaInput">
+                <h1 id="DeveloperName">Shine Co'ltd</h1>
+                <h1 id="DeveloperName">Shine Co'ltd</h1>
+            {% if error_msg %}
+                <div class="alert">{{ error_msg }}</div>
+            {% endif %}
+                <input style="width: 300px; height: 40px; border-radius: 10px; border: solid 2px #e6b445; margin: 20px; background-color: #e3e3e3;" type="email" name="signup_email_html" class="input_box" placeholder="Email Account (@smail.com)">
+                <input style="width: 300px; height: 40px; border-radius: 10px; border: solid 2px #e6b445; margin: 20px; background-color: #e3e3e3;" type="password" name="signup_password_html" class="input_box" placeholder="Password Security">
+                <input type="hidden" name="action_html" value="signup">
+                <button type="submit" class="button_login">SIGN UP</button>
+                    <span class="signin">Already have an account? <a href="/login_page">Login</a></span>
+                </div>
+        </form>
+    </div>
+
+    <script>
+        let pageMotify = document.getElementById('pageMotify');
+        pageMotify.style.backgroundColor = '#a7adaf';
+        pageMotify.style.display = 'flex';
+        pageMotify.style.alignItems = 'center';
+        pageMotify.style.justifyContent = 'center';
+        pageMotify.style.width = '100%';
+        pageMotify.style.height = '100vh';
+        pageMotify.style.fontWeight = 'bold';
+        pageMotify.style.fontSize = '20px';
+        pageMotify.style.transition = '0.5s';
+
+        let form = document.getElementById('form');
+        form.style.border = '2px solid #e6b445';
+        form.style.width = '800px';
+        form.style.height = '500px';
+        form.style.display = 'flex';
+        form.style.boxShadow = '0px 10px 40px #e6b445';
+        form.style.backgroundColor = '#fefefe';
+
+        let DeveloperName = document.getElementById('DeveloperName');
+        DeveloperName.style.fontSize = '30px';
+        DeveloperName.style.background = '-webkit-linear-gradient(#efa40d, #fed940, #ee9d02)';
+        DeveloperName.style.webkitBackgroundClip = 'text';
+        DeveloperName.style.webkitTextFillColor = 'transparent';
+
+        let inputBoxes = document.querySelectorAll('.inputBox');
+        inputBoxes.forEach((input) => {
+            input.style.width = '300px';
+            input.style.height = '40px';
+            input.style.borderRadius = '10px';   
+            input.style.border = 'solid 2px #e6b445';
+            input.style.margin = '20px';
+            input.style.backgroundColor = '#e3e3e3'; 
+        });
+
+        let areaInput = document.getElementById('areaInput'); 
+        areaInput.style.width = '80%';
+        areaInput.style.height = '100%';
+        areaInput.style.display = 'flex';
+        areaInput.style.alignItems = 'center';
+        areaInput.style.justifyContent = 'center';
+        areaInput.style.flexDirection = 'column';  
+
+        function applyNightMode() {
+            pageMotify.style.backgroundColor = 'black';
+            form.style.backgroundColor = '#1c1c1c';
+            DeveloperName.style.color = 'white';
+            inputBoxes.forEach((input) => {
+                input.style.backgroundColor = '#333';
+                input.style.color =  'white';
+            });
+        }
+        function applyBrightMode() {
+            pageMotify.style.backgroundColor = '#a7adaf';
+            form.style.backgroundColor = '#fefefe';
+            DeveloperName.style.color = 'black';
+            inputBoxes.forEach((input) => {
+                input.style.backgroundColor = 'white';
+                input.style.color =  'black';
+            });
+        }
+
+        if (localStorage.getItem('Mod') == 'bright'){
+            applyBrightMode();
+        }else if (localStorage.getItem('Mod') == 'night'){
+            applyNightMode();
+        }
+
+        let nightMod = document.getElementById('nightMod');
+
+        nightMod.addEventListener('click',(e) => {
+            e.preventDefault();
+            if (localStorage.getItem('Mod') == 'bright'){
+                localStorage.setItem('Mod','night');
+                applyNightMode();
+            }else if (localStorage.getItem('Mod') == 'night'){
+                localStorage.setItem('Mod','bright');
+                applyBrightMode();
+            }else{
+                localStorage.setItem('Mod','night');
+                applyNightMode();
+            }
+        });
+    </script>
+</body>
+
+</html>

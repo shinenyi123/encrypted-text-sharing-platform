@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <title>Version 1.1</title>
+        <style>
+
+         * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body{
+            overflow: auto;
+        }
+
+        form{
+            padding: 10px;
+            margin: 30px;
+            border-radius: 15px;
+        }
+
+        span{
+            color: #2563eb;
+        }
+
+        .s_m{
+            background: rgba(35,113,228,0.1);
+            border: 1px solid #00bfff;
+            border-radius: 5px;
+            padding: 5px;
+            margin-left: 75%;    
+        }
+
+        .d_b_btn{
+            position: absolute;
+            z-index: 3;
+            top: 50px;
+            right: 50px;
+            padding: 5px;
+
+            font-size: 20px;
+            background: none;
+            outline: none;
+            border-radius: 10px;
+            border: 1px solid #1d4ed8;
+        }
+
+        .d_b_btn:hover{
+            background-color: #2563eb;
+        }
+
+        nav h1{
+            position: relative;
+            z-index: 2;
+            bottom: 30px;
+            color: #1d4ed8;
+            text-align: center;
+        }
+
+        .userdata_and_btn2_inputbox_outbox{
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin-bottom: 50px;
+        }
+
+        .userdata_and_btn2{
+            background : rgba(35, 113, 228, 0.1);
+            border: 1px solid #0791c0;
+            border-radius: 20px;
+            width: 250px;
+        }
+
+        .form{
+            padding: 20px;
+        }
+
+        .form h1{
+            color: white;
+            font-size: 1.5em;
+            margin: 10px;
+            padding-bottom: 10px;
+        }
+
+        .i-input{
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            padding-left: 20px;
+            margin: 10px;
+            background-color: #0b1220;
+            border: 1px solid #00bfff;
+            border-radius: 10px;
+        }
+
+        .i-input i{
+            color: #0791c0;
+        }
+
+        .form input[type="text"],
+        .form input[type="password"]{
+            margin: 5px;
+            background: none;
+            color: white;
+            border: none;
+            outline: none;
+            overflow: hidden;
+        }
+
+        .input_button{
+            display: block;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .input_button .button1,.button2{
+            width: 200px;
+            height: 50px;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+
+        .button1 i,.button2 i{
+            font-size: 1.2em;
+            color: #00bfff;
+        }
+
+        .input_button .button1{
+            background-color: #1d4ed8;
+            border: none;
+            color: white;
+            transition: 0.4s;
+        }
+
+        .input_button .button1:hover{
+            border:2px solid aqua;
+            transition: 0.4s;
+        }
+
+        .input_button .button2{
+            background: none;
+            border: 1px solid #2563eb;
+            color: #1d4ed8;
+            transition: 0.3s;
+        }
+
+        .input_button .button2:hover{
+            border: 3px solid aqua;
+            transition: 0.3s;
+        }
+
+        .container {
+            display: flex;
+        }
+
+        .main,.main2{
+            background : rgba(35, 113, 228, 0.1);
+            border: 1px solid #0791c0;
+            border-radius: 20px;
+            margin: 10px;
+            padding: 10px;
+            height: 400px;
+            width: 380px;
+        }
+
+        .main .h1-i,.main2 .h1-i{
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .main i,.main2 i{
+            color: #2563eb;
+        }
+
+        .main h1, .main2 h1{
+            color: white;
+            padding: 10px;
+        }
+
+        textarea{
+            background-color: #000;
+            color: white;
+            width: 100%;
+            height: 320px;
+            padding: 10px;
+            border-radius: 20px;
+            overflow: auto;
+            transition: 0.6s;
+        }
+
+        textarea:hover{
+            transform: translateY(-7px);
+            transition: 0.6s;
+        }
+
+        textarea:focus-within{
+            border: 2px solid white;
+        }
+
+        .inputbox_outputbox{
+            background : rgba(35, 113, 228, 0.6);
+            border: 2px solid aqua;
+            color: white;
+            text-shadow: 0px 0px 10px black;
+
+            max-width: 200px;
+            min-width: 200px;
+            max-height: 330px;
+            min-height: 330px;
+            box-shadow: 0 0 15px rgb(0, 0, 0);
+
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            border-radius: 15px;
+
+            position: fixed;
+            top:-160px;
+            right:-10px;
+
+            cursor: grab;
+            user-select: none;
+        }
+
+        .inputbox_outputbox:active{
+            cursor: grabbing;
+        }
+
+        .box2{
+            display: block;
+            text-align: center;
+            height: auto;
+            padding: 10px;
+            border: 2px solid #1d4ed8;
+            max-width: 160px;
+            min-width: 160px;
+            max-height: 250px;
+            min-height: 250px;
+            overflow-y: scroll;
+            scrollbar-color: #00eaff #1d4ed8;
+        }
+
+        .filebtn_deletebtn{
+            display: flex;
+        }
+
+        .box2 button{
+            background: none;
+            background-color: #0b1220;
+            color: white;
+            padding: 10px;
+            border: 2px solid #1d4ed8;
+            border-radius: 10px;
+        }
+      
+        .box2 button:hover{
+            background-color: #0791c0;
+            color: #000;
+            border: 2px solid #1d4ed8;
+        }
+
+        .box2 .delete_button{
+            display: inline-block;
+            background: none;
+            border: none;
+            color: #0b1220;
+            text-shadow: 0px 0px 10px white;
+        }
+
+        .box2 .delete_button:hover{
+            background: none;
+            border: none;
+            color: white;
+        }
+
+        .btns{
+            position: fixed;
+            bottom: 0;
+            left: 0;
+
+            background: rgba(0,0,0,0.1);
+            width: 100%;
+
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 15px;
+
+            backdrop-filter: blur(10px);
+            border-top:3px solid #0791c0;
+            transition: 0.4s;
+        }
+        .btns:hover{
+            padding: 25px;
+            transition: 0.4s;
+        }
+
+        .btns i{
+            padding: 5px;
+            font-size: 1.5em;
+            color: #0791c0;
+        }
+
+        .btns button{
+            color: white;
+            background: none;
+            border: none;
+            transition: 0.3s;
+        }
+
+        .btns button:hover{
+            text-decoration: underline 1px #2563eb;
+            transform: translateY(-5px);
+            transition: 0.3s;
+        }
+/* ================= THEME SYSTEM ================= */
+
+        body {
+            transition: 0.5s;
+        }
+
+        body.light-mode {
+            background-color: white;
+        }
+
+        body.dark-mode {
+            background-color: #020617;
+        }
+
+        body.light-mode form {
+            background : rgba(35, 113, 228, 0.2);
+        }
+        body.dark-mode form {
+            background-color: #0b1220;
+        }
+
+        body.light-mode .form h1{
+            color: black;
+        }
+
+        body.light-mode .container h1{
+            color: black;
+        }
+
+        body.light-mode .btns button{
+            color: black;
+        }
+
+    </style>
+</head>
+
+<body>
+    <!--== ALL ==-->
+    <form action="/main_web" method="post">
+        <!--== HEADER ==-->
+        <span>Outlier (Shine nyi nyi aung), [6/21/2026 9:00 AM]</span>
+        <div>
+            <span>Logged in as: <b>{{ user_email }}</b></span>
+            <a href="/logout" class="logout-link">Logout     <i class="fa-solid fa-share-from-square"></i></a>
+            <span class="s_m">
+                <i class="fa-solid fa-light fa-bell"></i>
+                    {% if status_msg %}
+                        {{ status_msg }}
+                    {% endif %}
+            </span>
+        </div>
+        <button type="button" class="d_b_btn"></button>
+        <nav>
+            <h1>Version 1.2</h1>
+        </nav>
+        <!--== HEADER END ==-->
+
+        <!--== USERDATA AND BTN2 AND INPUTBOX,OUTPUTBOX ==-->
+        <div class="userdata_and_btn2_inputbox_outbox">
+            <!--==User Data and btn2==-->
+            <div class="userdata_and_btn2">
+                <!--== userdata ==-->
+                <div class="form">
+                    <h1><i class="fa-solid fa-user"></i>   User Data</h1>
+
+                    <div class="i-input">
+                        <i class="fa-solid fa-lock"></i><input type="password" name="password_html" placeholder="password">
+                    </div>
+                    <div class="i-input">
+                        <i class="fa-solid fa-location"></i><input type="text" name="address_html" placeholder="Address">
+                    </div>
+                    <div class="i-input">
+                        <i class="fa-solid fa-folder"></i><input type="text" name="file_name_html" placeholder="File name">
+                    </div>
+                </div>
+                <!--== userdata end ==-->
+
+                <!--==save file list,message file list==-->
+                <div class="input_button">
+                    <button name="action_file_list" value="receive" type="submit" class="button1">
+                        <i class="fa-solid fa-save"></i>     Save File List
+                    </button>
+                    <button name="action_file_list" value="transfer" type="submit" class="button2">
+                        <i class="fa-solid fa-message"></i>     Message File List
+                    </button>
+                </div>
+                <!--== save file list,message file list end ==-->
+            </div>
+            <!--== userdata and btn2 end ==-->
+
+            <!-- ===== MAIN INPUT / OUTPUT ===== -->
+            <div class="container">
+                <div class="main">
+                    <div class="h1-i">
+                        <h1><i class="fa-solid fa-code"></i>     Input</h1>
+                        <h2><i class="fa-solid fa-copy"></i></h2>
+                    </div>
+                    <textarea name="text_html" placeholder="Write here....">
+                        {{ input_text }}
+                    </textarea>
+                </div>
+
+                <div class="main2">
+                    <div class="h1-i">
+                        <h1><i class="fa-solid fa-computer"></i>     Output</h1>
+                        <h2><i class="fa-solid fa-copy"></i></h2>
+                    </div>
+                    <textarea readonly>
+                        {{ output_text }}
+                    </textarea>
+                </div>
+            </div>
+            <!--== MAIN INPUT / OUTPUT END ==-->
+        </div>
+        <!--== USERDATA AND BTN2 AND INPUTBOX,OUTPUTBOX END ==-->
+
+        {% if show_files_receive_py %}
+        <div class="inputbox_outputbox" id="inputbox_outputbox">
+            <!-- ===== Save File List BOX ===== -->
+            <div class="inputbox"> 
+                <h1>Receive</h1>
+                <div class="box2">
+                    <ul>
+                        {% for file in received_files_list %}
+                            <li>
+                                <div class="filebtn_deletebtn">
+                                    <button type="submit" name="read_file_id" value="{{ file.id }}" class="chat-btn">
+                                        {{ file.file_name }}
+                                    </button>
+                                    <button name="delete_save_file_id" value="{{ file.id }}" class="delete_button"><i class="fa-solid fa-trash"></i></button>
+                                    <input type="hidden" name="action_file_receive_html" value="receive">
+                                </div>
+                            </li>
+                        {% endfor %}
+                     </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if show_files_transfer_py %}
+        <div class="inputbox_outputbox" id="inputbox_outputbox">
+            <div class="inputbox"> 
+                <h1>Transfer</h1>
+                <div class="box2">
+                    <ul>
+                        {% for file in transfer_file_list %}
+                            <li>
+                                <button type="submit" name="read_file_id" value="{{ file.id }}" class="chat-btn">
+                                    {{ file.file_name }}
+                                </button>
+                                <button name="delete_transfer_file_id" value="{{ file.id }}" class="delete_button"><i class="fa-solid fa-trash"></i></button>
+                                <input type="hidden" name="action_file_transfer_html" value="transfer">
+                            </li>
+                        {% endfor %} 
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ===== BUTTON ACTIONS ===== -->
+        <footer>
+            <div class="btns">
+                <button class="a" type="submit" name="action_html"    value="sent"      ><i class="fa-solid fa-paper-plane"></i>                sent</button>
+                <button type="submit"           name="action_html"    value="w_to_p"    ><i class="fa-solid fa-arrow-right-arrow-left"></i>     Word to Password</button>
+                <button type="submit"           name="action_html"    value="p_to_w"    ><i class="fa-solid fa-lock"></i>                       Password to Word</button>
+                <button class="a" type="submit" name="action_html"    value="save"      ><i class="fa-solid fa-floppy-disk"></i>                File save</button>
+            </div>
+        </footer>        
+        <!--== BUTTON ACTIONS END ==-->
+    </form>
+    <!--== ALL END ==-->
+
+    <script>
+      /* ================= THEME SYSTEM ================= */
+
+    const themeBtn = document.querySelector(".d_b_btn");
+
+    // Load saved theme
+    const savedTheme = localStorage.getItem("theme");
+
+    if (savedTheme === "dark") {
+        document.body.classList.add("dark-mode");
+        themeBtn.textContent = "🔆";
+    } else {
+        document.body.classList.add("light-mode");
+        themeBtn.textContent = "🌙";
+    }
+
+    // Toggle theme
+    themeBtn.addEventListener("click", function (e) {
+    e.preventDefault();
+
+    if (document.body.classList.contains("dark-mode")) {
+        document.body.classList.remove("dark-mode");
+        document.body.classList.add("light-mode");
+
+        localStorage.setItem("theme", "light");
+        themeBtn.textContent = "🌙";
+    } else {
+        document.body.classList.remove("light-mode");
+        document.body.classList.add("dark-mode");
+
+        localStorage.setItem("theme", "dark");
+        themeBtn.textContent = "🔆";
+    }
+    });
+        const box = document.getElementById("inputbox_outputbox");
+
+        box.style.top = localStorage.getItem("boxPositionTop") || "50px";     
+        box.style.left = localStorage.getItem("boxPositionLeft") || "350px";    
+        box.style.right = "auto";
+
+        let isDragging = false;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        box.addEventListener("mousedown", (e) => {
+            isDragging = true;
+
+            offsetX = e.clientX - box.offsetLeft;
+            offsetY = e.clientY - box.offsetTop;
+        });
+
+        document.addEventListener("mousemove", (e) => {
+            if (!isDragging) return;
+
+            box.style.left = (e.clientX - offsetX) + "px";
+            box.style.top = (e.clientY - offsetY) + "px";
+            localStorage.setItem("boxPositionLeft", box.style.left);
+            localStorage.setItem("boxPositionTop", box.style.top);
+        });
+
+        document.addEventListener("mouseup", () => {
+            isDragging = false;
+        });
+    </script>
+</body>
+
+</html>
