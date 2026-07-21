@@ -1,20 +1,17 @@
 import os
-
-from flask import Flask, redirect, render_template, request, session, url_for
-
+from flask import Flask, redirect, render_template, request, session, url_for , jsonify
 import module_wChange
 import modules
 from database import (
-    delete_save_file,
-    delete_transfer_file,
-    fetch_file_by_id,
-    fetch_received_file_by_id,
     fetch_user,
-    get_user_files,
-    insert_file,
     insert_received_file,
     get_received_files,
     init_db,
+    get_contacts,
+    get_sent_files,
+    all_files,
+    delete_file,
+    received_file_exists,
 )
 
 app = Flask(__name__, template_folder="templates")
@@ -72,12 +69,16 @@ def signin_post():
 
     return render_template("signin_motify.html", error_msg=error_msg)
 
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("login_page"))
-
+@app.route("/contacts", methods=["GET"])
+def send():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"contacts": []}), 401
+        
+    contacts = get_contacts(user_id)
+    return jsonify({
+        "contacts": contacts
+    })
 
 @app.route("/main_web", methods=["GET", "POST"])
 def main_web():
@@ -86,187 +87,162 @@ def main_web():
 
     user_id = session["user_id"]
     user_email = session.get("username")
-    files = get_user_files(user_id)
     output_text = session.get("encrypted_text", "")
     input_text = session.get("input_text", "")
-    status_msg = None
+    selected_contact_id = session.get("selected_contact_id")
+    get_received_files_list = get_received_files(user_id, selected_contact_id)
+    get_sent_files_list = get_sent_files(user_id, selected_contact_id)
+    session['status_msg'] = None
 
     if request.method == "POST":
         action = request.form.get("action_html")
-        action_file_list = request.form.get("action_file_list")
 
-        password = request.form.get("password_html", "")
+        password_encrypt = request.form.get("password_encrypt_html", "")
+        password_decrypt = request.form.get("password_decrypt_html", "")
+
         address = request.form.get("address_html", "").strip()
-        file_name = request.form.get("file_name_html", "untitled.txt").strip() or "untitled.txt"
+        file_name = request.form.get("filename_html").strip()
 
         text_input = request.form.get("text_html", "")
 
         action_read_file_id = request.form.get("read_file_id")
-        action_delete_save_file_id = request.form.get("delete_save_file_id")
-        action_delete_transfer_file_id = request.form.get("delete_transfer_file_id")
+        action_delete_file_id = request.form.get("delete_file_id")
 
-        password_value = None
-        if password and password.strip():
+        logout_button = request.form.get('logout_button')
+        contact_name = request.form.get('contact_name')
+
+        if logout_button == 'logout':
+            session.clear()
+            return redirect(url_for("login_page"))
+
+        password_encrypt_value = None
+        if password_encrypt.strip():
             try:
-                password_value = int(password)
+                password_encrypt_value = int(password_encrypt)
             except ValueError:
-                password_value = None
+                password_encrypt_value = None
+
+        password_decrypt_value = None
+        if password_decrypt.strip():
+            try:
+                password_decrypt_value = int(password_decrypt)
+            except ValueError:
+                password_decrypt_value = None
 
         session["input_text"] = text_input
 
-        if action == "w_to_p":
-            if len(str(password_value)) == 5:
-                if not text_input or text_input.strip() == "":
-                    output_text = ""
-                    session["encrypted_text"] = ""
-                    status_msg = "Please enter some text to encrypt!"
-                elif password_value is None:
-                    output_text = ""
-                    session["encrypted_text"] = ""
-                    status_msg = "Password must be numeric for encryption!"
+
+        if action == "sent":
+            if user_email == address:
+                session['status_msg'] = "You cannot send a file to yourself!"
+            else:
+                if len(str(password_encrypt_value)) == 5:
+                    if not text_input or text_input.strip() == "":
+                        output_text = ""
+                        session["encrypted_text"] = ""
+                        session['status_msg'] = "Please enter some text to encrypt!"
+                    else:
+                        if all(char.isalpha() or char.isspace() for char in text_input):
+                            output_text = module_wChange.Encrypt(text_input, password_encrypt_value)
+                            session["encrypted_text"] = output_text
+                            encrypted_payload = session.get("encrypted_text")
+                            sent = True
+                        else:
+                            session['status_msg'] = 'Write text only!'
+                            sent = False
+                        session['user_name'] = user_email
+                        receiver = fetch_user(address)
+                        if sent:
+                            if received_file_exists(user_id, receiver["id"], file_name):
+                                session['status_msg'] = "You have already sent this file to this user."
+                            else:
+                                if receiver is None:
+                                    session['status_msg'] = "Receiver email not found"
+                                elif file_name == '':
+                                    session['status_msg'] = 'Please enter File name!'
+                                else:
+                                    insert_received_file((receiver["id"], user_id, file_name, encrypted_payload))
+                                    session['status_msg'] = f"Shared to {address}"
                 else:
-                    output_text = module_wChange.Encrypt(text_input, password_value)
-                    session["encrypted_text"] = output_text
-                    status_msg = "Encryption completed"
-            else:
-                status_msg = "Password must be a 5-digit number for encryption!"
+                    session['status_msg'] = "Password must be a 5-digit number for encryption!"
 
-        elif action == "p_to_w":
-            if len(str(password_value)) == 5:
-                if not text_input or text_input.strip() == "":
-                    output_text = ""
-                    session["encrypted_text"] = ""
-                    status_msg = "Please enter some text to decrypt!"
-                elif password_value is None:
-                    output_text = ""
-                    session["encrypted_text"] = ""
-                    status_msg = "Password must be numeric for decryption!"
-                else:
-                    output_text = module_wChange.Decrypt(text_input, password_value)
-                    session["encrypted_text"] = output_text
-                    status_msg = "Decryption completed"
-            else:
-                status_msg = "Password must be a 5-digit number for encryption!"
-
-        elif action == "save":
-            encrypted_payload = session.get("encrypted_text") or output_text
-            if not encrypted_payload:
-                encrypted_payload = module_wChange.Encrypt(text_input, password_value) if password_value is not None else text_input
-            insert_file((user_id, file_name, encrypted_payload))
-            files = get_user_files(user_id)
-            output_text = encrypted_payload
-            status_msg = "Data block saved"
-
-        elif action == "sent":
-            encrypted_payload = session.get("encrypted_text") or output_text
-            session['user_name'] = user_email
-            if not encrypted_payload:
-                encrypted_payload = module_wChange.Encrypt(text_input, password_value) if password_value is not None else text_input
-            receiver = fetch_user(address)
-            if receiver is None:
-                status_msg = "Receiver email not found"
-            else:
-                insert_received_file((receiver["id"], user_id, file_name, encrypted_payload))
-                status_msg = f"Shared to {address}"
+            receiver_id = session.get('selected_contact_id')
+            get_received_files_list = get_received_files(user_id, receiver_id)
+            get_sent_files_list = get_sent_files(user_id, receiver_id)
             
             return render_template(
-                "main.html",
-                user_email=user_email,
-                status_msg=status_msg,
+                "main 2.5.2.html",
+                contact_name=session.get('selected_contact_email'),
+                get_received_files=get_received_files_list if get_received_files_list is not None else [],
+                get_sent_files=get_sent_files_list if get_sent_files_list is not None else [],
+                user_email=user_email.rsplit('@', 1)[0],
+                file_name=session.get("selected_file_name"),
+                status_msg=session.get('status_msg'),
             )
 
-        if action_file_list == "receive":
-            received_files = get_user_files(user_id)
-            if received_files:
-                file_row = received_files[0]
-                input_text = file_row["encrypted_content"]
-                output_text = file_row["encrypted_content"]
-                session['user_name'] = user_email
-                session["input_text"] = input_text
-                session["encrypted_text"] = input_text
-                status_msg = "Loaded received file"
-                
-                return render_template(
-                        "main.html",
-                        user_email=user_email,
-                        show_files_receive_py=True,
-                        received_files_list=received_files,
-                        status_msg=status_msg,
-                    )
-            else:
-                status_msg = "No received files found"
-    
-        elif action_file_list == "transfer":
-            user_files = get_received_files(user_id)
-            if user_files:
-                file_row = user_files[0]
-                input_text = file_row["encrypted_content"]
-                output_text = file_row["encrypted_content"]
-                session['user_name'] = user_email
-                session["input_text"] = input_text
-                session["encrypted_text"] = input_text
-                status_msg = "Loaded saved file for transfer"
-
-                return render_template(
-                        "main.html",
-                        user_email=user_email,
-                        show_files_transfer_py=True,
-                        transfer_file_list=user_files,
-                        status_msg=status_msg,
-                    )
-            else:
-                status_msg = "No saved files found for transfer"
-
-
-        received_files = get_user_files(user_id)
-        if action_read_file_id == received_files[0]["id"] if received_files else None:
-            file_row = received_files[0]
-            file_row = fetch_file_by_id(int(action_read_file_id), user_id)
-            if file_row is None:
-                file_row = fetch_received_file_by_id(int(action_read_file_id), user_id)
-            if file_row:
-                input_text = file_row["encrypted_content"]
-                output_text = file_row["encrypted_content"]
-                session['user_name'] = user_email
-                session["input_text"] = input_text
-                session["encrypted_text"] = input_text
-                status_msg = "Loaded file content"
-
-                return render_template(
-                    "main.html",
-                    user_email=user_email,
-                    status_msg=status_msg,
-                )
-            
-        if action_delete_save_file_id:
-            delete_save_file(int(action_delete_save_file_id), user_id)
-            session['user_name'] = user_email
-            status_msg = "File deleted successfully"
-
+        elif contact_name:
+            receiver_id, email = contact_name.split("|")
+            receiver_id = int(receiver_id)
+            session['selected_contact_email'] = email
+            session['selected_contact_id'] = receiver_id
+            get_received_files_list = get_received_files(user_id, receiver_id)
+            get_sent_files_list = get_sent_files(user_id, receiver_id)
             return render_template(
-                    "main.html",
-                    user_email=user_email,
-                    status_msg=status_msg,
-                )
-        
-        if action_delete_transfer_file_id:
-            delete_transfer_file(int(action_delete_transfer_file_id), user_id)
-            session['user_name'] = user_email
-            status_msg = "File deleted successfully"
+                "main 2.5.2.html",
+                contact_name=session.get('selected_contact_email'),
+                get_received_files=get_received_files_list if get_received_files_list is not None else [],
+                get_sent_files=get_sent_files_list if get_sent_files_list is not None else [],
+                user_email=user_email.rsplit('@', 1)[0],
+                file_name=session.get("selected_file_name"),
+            )
 
+        elif action_read_file_id:
+            all_files_list = all_files(user_id)
+            for file_list in all_files_list:
+                if str(file_list['id']) == str(action_read_file_id):
+                    fileName = file_list['file_name']
+                    session["selected_file_name"] = fileName
+                    session["output_file"] = file_list['encrypted_content']
+                    break
             return render_template(
-                    "main.html",
-                    user_email=user_email,
-                    status_msg=status_msg,
-                )
+                "main 2.5.2.html",
+                contact_name=session.get('selected_contact_email'),
+                get_received_files=get_received_files_list if get_received_files_list is not None else [],
+                get_sent_files=get_sent_files_list if get_sent_files_list is not None else [],
+                user_email=user_email.rsplit('@', 1)[0],
+                file_name=session.get("selected_file_name"),
+            )
+
+        elif action == 'decrypt':
+            if len(str(password_decrypt_value)) == 5:
+                output_decrypted_text = module_wChange.Decrypt(session.get('output_file'), password_decrypt_value)
+                session["decrypted_text"] = output_decrypted_text
+            else:
+                session['decrypted_text'] = f'.....'
+                session['status_msg'] = f'Password must be a 5-digit number for encryption!'
+            return render_template(
+                "main 2.5.2.html",
+                contact_name=session.get('selected_contact_email'),
+                get_received_files=get_received_files_list if get_received_files_list is not None else [],
+                get_sent_files=get_sent_files_list if get_sent_files_list is not None else [],
+                user_email=user_email.rsplit('@', 1)[0],
+                decrypted_text=session.get("decrypted_text", ""),
+                file_name=session.get("selected_file_name"),
+                status_msg=session.get('status_msg'),
+            )
+
+        elif action_delete_file_id:
+            delete_file(action_delete_file_id)
+
 
     return render_template(
-        "main.html",
-        user_email=user_email,
-        files=files,
-        output_text=output_text,
-        input_text=input_text,
-        status_msg=status_msg,
+        "main 2.5.2.html",
+        contact_name=session.get('selected_contact_email'),
+        get_received_files=get_received_files_list if get_received_files_list is not None else [],
+        get_sent_files=get_sent_files_list if get_sent_files_list is not None else [],
+        user_email=user_email.rsplit('@', 1)[0],
+        file_name=session.get("selected_file_name"),
+        status_msg=session.get('status_msg'),
     )
 
 
