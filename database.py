@@ -147,7 +147,7 @@ def all_files(user_id):
 
 
 def delete_file(file_id):
-    execute_query("DELETE FROM received_files WHERE id = ?", (file_id))
+    execute_query("DELETE FROM received_files WHERE id = ?", (file_id,))
 
 
 def received_file_exists(sender_id, receiver_id, file_name):
