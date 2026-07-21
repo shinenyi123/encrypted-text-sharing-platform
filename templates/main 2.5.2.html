@@ -1427,8 +1427,8 @@
                             </div>
 
                             <ul id="r_f_list" class="active">
+                                <li>
                                 {% for file in get_received_files %}
-                                    <li>
                                         <div class="files">
                                             <button type="submit" class="out_seen1" name="read_file_id" value="{{ file.id }}">
                                                 <i class="fa-solid fa-file"></i>
@@ -1438,13 +1438,13 @@
                                             </button>
                                             <button name="delete_file_id" value="{{ file.id }}" class="d_btn"><i class="fa-solid fa-trash" style="color: #ffffff;"></i></button>
                                         </div>
-                                    </li>
                                 {% endfor %}
+                                </li>
                             </ul>
 
                             <ul id="s_f_list">
+                                <li>
                                 {% for file in get_sent_files %}
-                                    <li>
                                         <div class="files">
                                             <button type="submit" class="out_seen2" name="read_file_id" value="{{ file.id }}">
                                                 <i class="fa-solid fa-file"></i>
@@ -1454,8 +1454,8 @@
                                             </button>
                                             <button name="delete_file_id" value="{{ file.id }}" class="d_btn"><i class="fa-solid fa-trash" style="color: #ffffff;"></i></button>
                                         </div>
-                                    </li>
                                 {% endfor %}
+                                </li>
                             </ul>
 
                         </div>
