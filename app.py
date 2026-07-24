@@ -12,6 +12,7 @@ from database import (
     all_files,
     delete_file,
     received_file_exists,
+    get_received_files_list,
 )
 
 app = Flask(__name__, template_folder="templates")
@@ -79,6 +80,24 @@ def send():
     return jsonify({
         "contacts": contacts
     })
+
+
+@app.route("/receive_files", methods=["GET"])
+def receive_files():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"received_files": []}), 401
+        
+    received_files = get_received_files_list(user_id)
+    
+    for file in received_files:
+        if 'created_at' in file and file['created_at']:
+            file['created_at'] = str(file['created_at'])
+
+    return jsonify({
+        "received_files": received_files
+    })
+
 
 @app.route("/main_web", methods=["GET", "POST"])
 def main_web():
