@@ -117,6 +117,27 @@ def get_contacts(user_id):
 
             return cur.fetchall()
 
+
+def get_received_files_list(user_id):
+    with connect_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT 
+                    rf.id,
+                    rf.file_name,
+                    rf.encrypted_content,
+                    rf.created_at,
+                    u.email AS sender_email,
+                    u.id AS sender_id
+                FROM received_files rf
+                JOIN users u ON rf.sender_id = u.id
+                WHERE rf.receiver_id = %s
+                ORDER BY rf.created_at DESC;
+            """, (user_id,))
+
+            return cur.fetchall()
+
+
 def insert_received_file(data):
     row = execute_query(
         "INSERT INTO received_files (receiver_id, sender_id, file_name, encrypted_content) VALUES (?, ?, ?, ?) RETURNING id",
