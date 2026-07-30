@@ -4,6 +4,18 @@ from psycopg2.extras import RealDictCursor
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
+
+def _normalize_row(row, cursor=None):
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        return row
+    if cursor is not None and getattr(cursor, "description", None):
+        columns = [col[0] for col in cursor.description]
+        return dict(zip(columns, row))
+    return row
+
+
 def connect_db():
     if DATABASE_URL:
         return psycopg2.connect(
@@ -65,7 +77,7 @@ def execute_query(query, values=()):
                 row = cursor.fetchone()
 
             conn.commit()
-            return row
+            return _normalize_row(row, cursor)
 
 
 def fetch_one(query, values=()):
@@ -73,7 +85,7 @@ def fetch_one(query, values=()):
     with connect_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(postgres_query, values)
-            return cursor.fetchone()
+            return _normalize_row(cursor.fetchone(), cursor)
 
 
 def fetch_all(query, values=()):
@@ -81,7 +93,8 @@ def fetch_all(query, values=()):
     with connect_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(postgres_query, values)
-            return cursor.fetchall()
+            rows = cursor.fetchall()
+            return [_normalize_row(row, cursor) for row in rows]
 
 
 def fetch_user(email):
@@ -115,7 +128,8 @@ def get_contacts(user_id):
                 ORDER BY u.email;
             """, (user_id, user_id))
 
-            return cur.fetchall()
+            rows = cur.fetchall()
+            return [_normalize_row(row, cur) for row in rows]
 
 
 def get_received_files_list(user_id):
