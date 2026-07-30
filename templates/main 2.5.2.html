@@ -1508,10 +1508,14 @@
                 <p>{{status_msg}}</p>
             </div>
             {% endif %}
+
             <div class="notification-box2">
                 <h3><i class="fa-solid fa-bell" style="margin-right: 10px;"></i>Notifications</h3>
-                <p>{{status_msg}}</p>
+                <div id="noti-list">
+                    <p style="color: #888; font-size: 13px;">No new notifications</p>
+                </div>
             </div>
+
             <div class="notification-box3">
                 <h3><i class="fa-solid fa-bell" style="margin-right: 10px;"></i>Notifications</h3>
                 <p id="msg">{{status_msg}}</p>
@@ -1577,48 +1581,64 @@
             setInterval(loadContacts, 2000);
 
 
+            const msg = document.getElementById("msg");
+
             function checkReceivedFiles() {
                 fetch("/receive_files")
                     .then(res => res.json())
                     .then(data => {
-                        const file_list = data.received_files;
+                        const allFiles = data.all_received_files || [];
+                        const selectedFiles = data.received_files || [];
+                        const fileContainer = document.getElementById("received-files-list");
 
-                        if (!file_list || file_list.length === 0) return;
+                        if (!fileContainer) return;
 
                         const savedList = JSON.parse(localStorage.getItem("myList") || "[]");
+                        const newFiles = allFiles.filter(file => !savedList.includes(String(file.id)));
 
-                        if (savedList.includes(file_list[0].id)) {
-                            console.log("");
-                        } else {
-                            localStorage.setItem("sender_email", file_list[0].sender_email);
+                        if (newFiles.length > 0) {
+                            const latestFile = newFiles[0];
+                            const senderEmail = latestFile.sender_email || "Someone";
+                            localStorage.setItem("sender_email", senderEmail);
+
+                            const notiMsg = `${senderEmail} sent message to you!`;
+
                             notificationBox3.style.display = "block";
-                            msg.textContent = `${localStorage.getItem('sender_email')} sent message to you!`;
+                            msg.textContent = notiMsg;
                             setTimeout(() => {
                                 notificationBox3.style.display = "none";
                             }, 3000);
+
+                            const notiList = document.getElementById("noti-list");
+                            if (notiList) {
+                                notiList.innerHTML = `<p style="padding: 5px 0; border-bottom: 1px solid #eee;">${notiMsg}</p>`;
+                            }
                         }
 
-                        const fileIds = file_list.map(file => file.id);
+                        const fileIds = allFiles.map(file => String(file.id));
                         localStorage.setItem("myList", JSON.stringify(fileIds));
 
-                        const fileContainer = document.getElementById("received-files-list");
                         fileContainer.innerHTML = "";
 
-                        file_list.forEach(file => {
-                            fileContainer.innerHTML += `
-                            <div class="files">
-                                <button type="submit" class="out_seen1" name="read_file_id" value="${file.id}">
-                                    <i class="fa-solid fa-file"></i>
-                                    <div class="text-box">
-                                        <span>${file.file_name}</span>
-                                    </div>
-                                </button>
-                                <button name="delete_file_id" value="${file.id}" class="d_btn">
-                                    <i class="fa-solid fa-trash" style="color: #ffffff;"></i>
-                                </button>
-                            </div>
-                        `;
-                        });
+                        if (selectedFiles.length === 0) {
+                            fileContainer.innerHTML = '<p style="color: #888; font-size: 13px;">No files for this contact.</p>';
+                        } else {
+                            selectedFiles.forEach(file => {
+                                fileContainer.innerHTML += `
+                                <div class="files">
+                                    <button type="submit" class="out_seen1" name="read_file_id" value="${file.id}">
+                                        <i class="fa-solid fa-file"></i>
+                                        <div class="text-box">
+                                            <span>${file.file_name}</span>
+                                        </div>
+                                    </button>
+                                    <button name="delete_file_id" value="${file.id}" class="d_btn">
+                                        <i class="fa-solid fa-trash" style="color: #ffffff;"></i>
+                                    </button>
+                                </div>
+                            `;
+                            });
+                        }
 
                     })
                     .catch(err => console.error("Error fetching files:", err));
@@ -1626,7 +1646,6 @@
 
             checkReceivedFiles();
             setInterval(checkReceivedFiles, 2000);
-
             // Theme Button
 
             const themeBtn = document.getElementById("themeBtn");
