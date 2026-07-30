@@ -85,17 +85,37 @@ def send():
 @app.route("/receive_files", methods=["GET"])
 def receive_files():
     user_id = session.get("user_id")
+
     if not user_id:
-        return jsonify({"received_files": []}), 401
-        
-    received_files = get_received_files_list(user_id)
-    
-    for file in received_files:
-        if 'created_at' in file and file['created_at']:
-            file['created_at'] = str(file['created_at'])
+        return jsonify({"received_files": [], "all_received_files": []}), 401
+
+    all_received_files = []
+    for file in get_received_files_list(user_id):
+        normalized_file = dict(file) if isinstance(file, dict) else {"id": file[0], "file_name": file[1], "encrypted_content": file[2], "created_at": file[3], "sender_email": file[4], "sender_id": file[5]}
+        if normalized_file.get("created_at"):
+            normalized_file["created_at"] = str(normalized_file["created_at"])
+        all_received_files.append(normalized_file)
+
+    selected_contact_id = session.get("selected_contact_id")
+    selected_contact_email = session.get("selected_contact_email")
+
+    filtered_files = all_received_files
+    if selected_contact_id is not None and str(selected_contact_id).strip() != "":
+        filtered_files = [
+            file for file in all_received_files
+            if str(file.get("sender_id")) == str(selected_contact_id)
+        ]
+    elif selected_contact_email:
+        filtered_files = [
+            file for file in all_received_files
+            if str(file.get("sender_email", "")).lower() == str(selected_contact_email).lower()
+        ]
 
     return jsonify({
-        "received_files": received_files
+        "received_files": filtered_files,
+        "all_received_files": all_received_files,
+        "selected_contact_id": selected_contact_id,
+        "selected_contact_email": selected_contact_email,
     })
 
 
@@ -109,8 +129,9 @@ def main_web():
     output_text = session.get("encrypted_text", "")
     input_text = session.get("input_text", "")
     selected_contact_id = session.get("selected_contact_id")
-    get_received_files_list = get_received_files(user_id, selected_contact_id)
-    get_sent_files_list = get_sent_files(user_id, selected_contact_id)
+    selected_contact_email = session.get("selected_contact_email")
+    received_files_for_contact = get_received_files(user_id, selected_contact_id)
+    sent_files_for_contact = get_sent_files(user_id, selected_contact_id)
     session['status_msg'] = None
 
     if request.method == "POST":
@@ -120,7 +141,7 @@ def main_web():
         password_decrypt = request.form.get("password_decrypt_html", "")
 
         address = request.form.get("address_html", "").strip()
-        file_name = request.form.get("filename_html").strip()
+        file_name = request.form.get("filename_html", "").strip()
 
         text_input = request.form.get("text_html", "")
 
@@ -150,7 +171,6 @@ def main_web():
 
         session["input_text"] = text_input
 
-
         if action == "sent":
             if user_email == address:
                 session['status_msg'] = "You cannot send a file to yourself!"
@@ -172,45 +192,49 @@ def main_web():
                         session['user_name'] = user_email
                         receiver = fetch_user(address)
                         if sent:
-                            if received_file_exists(user_id, receiver["id"], file_name):
+                            if receiver is None:
+                                session['status_msg'] = "Receiver email not found"
+                            elif received_file_exists(user_id, receiver["id"], file_name):
                                 session['status_msg'] = "You have already sent this file to this user."
+                            elif file_name == '':
+                                session['status_msg'] = 'Please enter File name!'
                             else:
-                                if receiver is None:
-                                    session['status_msg'] = "Receiver email not found"
-                                elif file_name == '':
-                                    session['status_msg'] = 'Please enter File name!'
-                                else:
-                                    insert_received_file((receiver["id"], user_id, file_name, encrypted_payload))
-                                    session['status_msg'] = f"Shared to {address}"
+                                insert_received_file((receiver["id"], user_id, file_name, encrypted_payload))
+                                session['status_msg'] = f"Shared to {address}"
                 else:
                     session['status_msg'] = "Password must be a 5-digit number for encryption!"
 
-            receiver_id = session.get('selected_contact_id')
-            get_received_files_list = get_received_files(user_id, receiver_id)
-            get_sent_files_list = get_sent_files(user_id, receiver_id)
-            
+            selected_contact_id = session.get('selected_contact_id')
+            received_files_for_contact = get_received_files(user_id, selected_contact_id)
+            sent_files_for_contact = get_sent_files(user_id, selected_contact_id)
+
             return render_template(
                 "main 2.5.2.html",
                 contact_name=session.get('selected_contact_email'),
-                get_received_files=get_received_files_list if get_received_files_list is not None else [],
-                get_sent_files=get_sent_files_list if get_sent_files_list is not None else [],
+                get_received_files=received_files_for_contact if received_files_for_contact is not None else [],
+                get_sent_files=sent_files_for_contact if sent_files_for_contact is not None else [],
                 user_email=user_email.rsplit('@', 1)[0],
                 file_name=session.get("selected_file_name"),
                 status_msg=session.get('status_msg'),
             )
 
         elif contact_name:
-            receiver_id, email = contact_name.split("|")
-            receiver_id = int(receiver_id)
+            try:
+                receiver_id_str, email = contact_name.split("|", 1)
+                receiver_id = int(receiver_id_str)
+            except (ValueError, TypeError):
+                receiver_id = None
+                email = contact_name
+
             session['selected_contact_email'] = email
             session['selected_contact_id'] = receiver_id
-            get_received_files_list = get_received_files(user_id, receiver_id)
-            get_sent_files_list = get_sent_files(user_id, receiver_id)
+            received_files_for_contact = get_received_files(user_id, receiver_id)
+            sent_files_for_contact = get_sent_files(user_id, receiver_id)
             return render_template(
                 "main 2.5.2.html",
                 contact_name=session.get('selected_contact_email'),
-                get_received_files=get_received_files_list if get_received_files_list is not None else [],
-                get_sent_files=get_sent_files_list if get_sent_files_list is not None else [],
+                get_received_files=received_files_for_contact if received_files_for_contact is not None else [],
+                get_sent_files=sent_files_for_contact if sent_files_for_contact is not None else [],
                 user_email=user_email.rsplit('@', 1)[0],
                 file_name=session.get("selected_file_name"),
             )
@@ -226,8 +250,8 @@ def main_web():
             return render_template(
                 "main 2.5.2.html",
                 contact_name=session.get('selected_contact_email'),
-                get_received_files=get_received_files_list if get_received_files_list is not None else [],
-                get_sent_files=get_sent_files_list if get_sent_files_list is not None else [],
+                get_received_files=received_files_for_contact if received_files_for_contact is not None else [],
+                get_sent_files=sent_files_for_contact if sent_files_for_contact is not None else [],
                 user_email=user_email.rsplit('@', 1)[0],
                 file_name=session.get("selected_file_name"),
             )
@@ -242,8 +266,8 @@ def main_web():
             return render_template(
                 "main 2.5.2.html",
                 contact_name=session.get('selected_contact_email'),
-                get_received_files=get_received_files_list if get_received_files_list is not None else [],
-                get_sent_files=get_sent_files_list if get_sent_files_list is not None else [],
+                get_received_files=received_files_for_contact if received_files_for_contact is not None else [],
+                get_sent_files=sent_files_for_contact if sent_files_for_contact is not None else [],
                 user_email=user_email.rsplit('@', 1)[0],
                 decrypted_text=session.get("decrypted_text", ""),
                 file_name=session.get("selected_file_name"),
@@ -252,13 +276,15 @@ def main_web():
 
         elif action_delete_file_id:
             delete_file(action_delete_file_id)
-
+            selected_contact_id = session.get('selected_contact_id')
+            received_files_for_contact = get_received_files(user_id, selected_contact_id)
+            sent_files_for_contact = get_sent_files(user_id, selected_contact_id)
 
     return render_template(
         "main 2.5.2.html",
         contact_name=session.get('selected_contact_email'),
-        get_received_files=get_received_files_list if get_received_files_list is not None else [],
-        get_sent_files=get_sent_files_list if get_sent_files_list is not None else [],
+        get_received_files=received_files_for_contact if received_files_for_contact is not None else [],
+        get_sent_files=sent_files_for_contact if sent_files_for_contact is not None else [],
         user_email=user_email.rsplit('@', 1)[0],
         file_name=session.get("selected_file_name"),
         status_msg=session.get('status_msg'),
