@@ -1,5 +1,11 @@
 import os
-from flask import Flask, redirect, render_template, request, session, url_for , jsonify
+import secrets
+from functools import wraps
+from flask import Flask, abort, redirect, render_template, request, session, url_for, jsonify
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import module_wChange
 import modules
 from database import (
@@ -13,10 +19,99 @@ from database import (
     delete_file,
     received_file_exists,
     get_received_files_list,
+    get_admin_users,
+    get_admin_user,
+    get_admin_sent_files,
+    count_admin_sent_files,
+    delete_user_account,
 )
 
 app = Flask(__name__, template_folder="templates")
 app.secret_key = "my_secret_key_123"
+
+
+def admin_required(view):
+    @wraps(view)
+    def wrapped_view(*args, **kwargs):
+        if not session.get("is_admin"):
+            return jsonify({"error": "Admin authentication required"}), 401
+        return view(*args, **kwargs)
+
+    return wrapped_view
+
+
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    if request.method == "POST":
+        payload = request.get_json(silent=True) or request.form
+        username = payload.get("username", "")
+        password = payload.get("password", "")
+        admin_username = os.environ.get("ADMIN_USERNAME", "")
+        admin_password = os.environ.get("ADMIN_PASSWORD", "")
+        valid = bool(admin_username and admin_password) and isinstance(username, str) and isinstance(password, str) and secrets.compare_digest(username, admin_username) and secrets.compare_digest(password, admin_password)
+        if valid:
+            session["is_admin"] = True
+            if request.is_json:
+                return jsonify({"authenticated": True})
+            return redirect(url_for("admin_users"))
+        if request.is_json:
+            return jsonify({"error": "Invalid admin credentials"}), 401
+        return render_template("admin_login.html", error_msg="Invalid admin credentials")
+    if session.get("is_admin"):
+        return redirect(url_for("admin_users"))
+    return render_template("admin_login.html", error_msg=None)
+
+
+@app.post("/api/admin/login")
+def admin_api_login():
+    return admin_login()
+
+
+@app.post("/api/admin/logout")
+@admin_required
+def admin_api_logout():
+    session.pop("is_admin", None)
+    return jsonify({"authenticated": False})
+
+
+@app.get("/api/admin/me")
+@admin_required
+def admin_api_me():
+    return jsonify({"authenticated": True})
+
+
+@app.get("/admin")
+@admin_required
+def admin_users():
+    return render_template("admin_users.html", users=get_admin_users())
+
+
+@app.get("/admin/user/<int:user_id>")
+@admin_required
+def admin_user_detail(user_id):
+    user = get_admin_user(user_id)
+    if user is None:
+        abort(404)
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+    except ValueError:
+        page = 1
+    per_page = 50
+    total = count_admin_sent_files(user_id)
+    return render_template(
+        "admin_user_detail.html",
+        user=user,
+        files=get_admin_sent_files(user_id, page, per_page),
+        page=page,
+        total_pages=max(1, (total + per_page - 1) // per_page),
+    )
+
+
+@app.post("/admin/user/<int:user_id>/delete")
+@admin_required
+def admin_delete_user(user_id):
+    delete_user_account(user_id)
+    return redirect(url_for("admin_users"))
 
 
 @app.route("/", methods=["GET"])
