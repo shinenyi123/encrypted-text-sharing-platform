@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin users</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 32px;
+            background: #101826;
+            color: #fff;
+            font: 16px Arial, sans-serif;
+        }
+
+        main {
+            max-width: 900px;
+            margin: auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+
+        h1 {
+            color: #17d67d;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #1b2437;
+        }
+
+        th,
+        td {
+            padding: 14px;
+            border-bottom: 1px solid #34425c;
+            text-align: left;
+        }
+
+        tbody tr {
+            cursor: pointer;
+        }
+
+        tbody tr:hover {
+            background: #26334b;
+        }
+
+        button {
+            padding: 9px 13px;
+            border: 0;
+            border-radius: 4px;
+            background: #17d67d;
+            color: #06130d;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .empty {
+            padding: 20px;
+            background: #1b2437;
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <header>
+            <h1>Users</h1>
+            <form method="post" action="/api/admin/logout"><button type="submit">Log out</button></form>
+        </header>
+        {% if users %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Email / username</th>
+                    <th>Created at</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr onclick="window.location.href='/admin/user/{{ user.id }}'">
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.created_at }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}<p class="empty">No users found.</p>{% endif %}
+    </main>
+</body>
+
+</html>

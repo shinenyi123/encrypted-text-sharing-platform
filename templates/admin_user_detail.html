@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>User details</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 32px;
+            background: #101826;
+            color: #fff;
+            font: 16px Arial, sans-serif;
+        }
+
+        main {
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        a {
+            color: #17d67d;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            gap: 20px;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            color: #17d67d;
+        }
+
+        .danger {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 28px;
+            border-collapse: collapse;
+            background: #1b2437;
+        }
+
+        th,
+        td {
+            padding: 14px;
+            border-bottom: 1px solid #34425c;
+            text-align: left;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .muted {
+            color: #a9b5c7;
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <p><a href="/admin">Back to users</a></p>
+        <header>
+            <div>
+                <h1>{{ user.email }}</h1>
+                <p class="muted">Created at: {{ user.created_at }}</p>
+            </div>
+            <form method="post" action="/admin/user/{{ user.id }}/delete"
+                onsubmit="return confirm('Delete this account and all sent and received file records?');">
+                <button class="danger" type="submit">Delete account</button>
+            </form>
+        </header>
+        <h2>Sent files</h2>
+        {% if files %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Recipient</th>
+                    <th>Timestamp</th>
+                    <th>Filename</th>
+                </tr>
+            </thead>
+            <tbody>{% for file in files %}<tr>
+                    <td>{{ file.recipient_email }}</td>
+                    <td>{{ file.created_at }}</td>
+                    <td>{{ file.file_name }}</td>
+                </tr>{% endfor %}</tbody>
+        </table>
+        {% else %}<p class="muted">No sent files.</p>{% endif %}
+        {% if total_pages > 1 %}
+        <nav>
+            {% if page > 1 %}<a href="/admin/user/{{ user.id }}?page={{ page - 1 }}">Previous</a>{% else
+            %}<span></span>{% endif %}
+            <span>Page {{ page }} of {{ total_pages }}</span>
+            {% if page < total_pages %}<a href="/admin/user/{{ user.id }}?page={{ page + 1 }}">Next</a>{% else
+                %}<span></span>{% endif %}
+        </nav>
+        {% endif %}
+    </main>
+</body>
+
+</html>
