@@ -113,25 +113,34 @@ def get_admin_user(user_id):
     )
 
 
-def get_admin_sent_files(user_id, page=1, per_page=50):
+def get_admin_user_files(user_id, page=1, per_page=50):
     offset = (page - 1) * per_page
     return fetch_all(
         """
-        SELECT rf.file_name, rf.created_at, recipient.email AS recipient_email
+        SELECT
+            rf.file_name,
+            rf.created_at,
+            sender.email AS sender_email,
+            recipient.email AS recipient_email,
+            CASE
+                WHEN rf.sender_id = ? THEN 'sent'
+                ELSE 'received'
+            END AS direction
         FROM received_files rf
+        JOIN users sender ON sender.id = rf.sender_id
         JOIN users recipient ON recipient.id = rf.receiver_id
-        WHERE rf.sender_id = ?
+        WHERE rf.sender_id = ? OR rf.receiver_id = ?
         ORDER BY rf.created_at DESC, rf.id DESC
         LIMIT ? OFFSET ?
         """,
-        (user_id, per_page, offset),
+        (user_id, user_id, user_id, per_page, offset),
     )
 
 
-def count_admin_sent_files(user_id):
+def count_admin_user_files(user_id):
     row = fetch_one(
-        "SELECT COUNT(*) AS total FROM received_files WHERE sender_id = ?",
-        (user_id,),
+        "SELECT COUNT(*) AS total FROM received_files WHERE sender_id = ? OR receiver_id = ?",
+        (user_id, user_id),
     )
     return int(row["total"] if row else 0)
 
