@@ -101,6 +101,52 @@ def fetch_user(email):
     return fetch_one("SELECT * FROM users WHERE email = ?", (email,))
 
 
+def get_admin_users():
+    return fetch_all(
+        "SELECT id, email, created_at FROM users ORDER BY created_at DESC, id DESC"
+    )
+
+
+def get_admin_user(user_id):
+    return fetch_one(
+        "SELECT id, email, created_at FROM users WHERE id = ?", (user_id,)
+    )
+
+
+def get_admin_sent_files(user_id, page=1, per_page=50):
+    offset = (page - 1) * per_page
+    return fetch_all(
+        """
+        SELECT rf.file_name, rf.created_at, recipient.email AS recipient_email
+        FROM received_files rf
+        JOIN users recipient ON recipient.id = rf.receiver_id
+        WHERE rf.sender_id = ?
+        ORDER BY rf.created_at DESC, rf.id DESC
+        LIMIT ? OFFSET ?
+        """,
+        (user_id, per_page, offset),
+    )
+
+
+def count_admin_sent_files(user_id):
+    row = fetch_one(
+        "SELECT COUNT(*) AS total FROM received_files WHERE sender_id = ?",
+        (user_id,),
+    )
+    return int(row["total"] if row else 0)
+
+
+def delete_user_account(user_id):
+    with connect_db() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM received_files WHERE sender_id = %s OR receiver_id = %s",
+                (user_id, user_id),
+            )
+            cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        conn.commit()
+
+
 def insert_user(data):
     execute_query("INSERT INTO users (email, password_hash) VALUES (?, ?)", data)
 
