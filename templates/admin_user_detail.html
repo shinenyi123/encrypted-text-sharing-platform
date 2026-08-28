@@ -79,23 +79,26 @@
                 <button class="danger" type="submit">Delete account</button>
             </form>
         </header>
-        <h2>Sent files</h2>
+        <h2>Message and file history</h2>
         {% if files %}
         <table>
             <thead>
                 <tr>
-                    <th>Recipient</th>
+                    <th>Sent / Received</th>
+                    <th>Contact</th>
                     <th>Timestamp</th>
                     <th>Filename</th>
                 </tr>
             </thead>
             <tbody>{% for file in files %}<tr>
-                    <td>{{ file.recipient_email }}</td>
+                    <td>{{ file.direction|title }}</td>
+                    <td>{% if file.direction == 'sent' %}{{ file.recipient_email }}{% else %}{{ file.sender_email }}{%
+                        endif %}</td>
                     <td>{{ file.created_at }}</td>
                     <td>{{ file.file_name }}</td>
                 </tr>{% endfor %}</tbody>
         </table>
-        {% else %}<p class="muted">No sent files.</p>{% endif %}
+        {% else %}<p class="muted">No sent or received files.</p>{% endif %}
         {% if total_pages > 1 %}
         <nav>
             {% if page > 1 %}<a href="/admin/user/{{ user.id }}?page={{ page - 1 }}">Previous</a>{% else
