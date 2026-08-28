@@ -21,8 +21,8 @@ from database import (
     get_received_files_list,
     get_admin_users,
     get_admin_user,
-    get_admin_sent_files,
-    count_admin_sent_files,
+    get_admin_user_files,
+    count_admin_user_files,
     delete_user_account,
 )
 
@@ -97,11 +97,11 @@ def admin_user_detail(user_id):
     except ValueError:
         page = 1
     per_page = 50
-    total = count_admin_sent_files(user_id)
+    total = count_admin_user_files(user_id)
     return render_template(
         "admin_user_detail.html",
         user=user,
-        files=get_admin_sent_files(user_id, page, per_page),
+        files=get_admin_user_files(user_id, page, per_page),
         page=page,
         total_pages=max(1, (total + per_page - 1) // per_page),
     )
