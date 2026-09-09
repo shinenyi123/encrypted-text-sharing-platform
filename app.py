@@ -1,13 +1,12 @@
 import os
-import secrets
-from functools import wraps
 from flask import Flask, abort, redirect, render_template, request, session, url_for, jsonify
 from dotenv import load_dotenv
+from flask_session import Session
 
 load_dotenv()
 
 import module_wChange
-import modules
+import auth_client
 from database import (
     fetch_user,
     insert_received_file,
@@ -23,43 +22,28 @@ from database import (
     get_admin_user,
     get_admin_user_files,
     count_admin_user_files,
-    delete_user_account,
 )
 
 app = Flask(__name__, template_folder="templates")
-app.secret_key = "my_secret_key_123"
-
-
-def admin_required(view):
-    @wraps(view)
-    def wrapped_view(*args, **kwargs):
-        if not session.get("is_admin"):
-            return jsonify({"error": "Admin authentication required"}), 401
-        return view(*args, **kwargs)
-
-    return wrapped_view
+app.secret_key = os.environ.get("FLASK_SECRET_KEY")
+if not app.secret_key:
+    raise RuntimeError("FLASK_SECRET_KEY environment variable is required")
+app.config.update(
+    SESSION_TYPE="filesystem",
+    SESSION_FILE_DIR=os.environ.get("SESSION_FILE_DIR", os.path.join(app.instance_path, "flask_session")),
+    SESSION_PERMANENT=False,
+    SESSION_USE_SIGNER=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true",
+)
+os.makedirs(app.config["SESSION_FILE_DIR"], exist_ok=True)
+Session(app)
 
 
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
-    if request.method == "POST":
-        payload = request.get_json(silent=True) or request.form
-        username = payload.get("username", "")
-        password = payload.get("password", "")
-        admin_username = os.environ.get("ADMIN_USERNAME", "")
-        admin_password = os.environ.get("ADMIN_PASSWORD", "")
-        valid = bool(admin_username and admin_password) and isinstance(username, str) and isinstance(password, str) and secrets.compare_digest(username, admin_username) and secrets.compare_digest(password, admin_password)
-        if valid:
-            session["is_admin"] = True
-            if request.is_json:
-                return jsonify({"authenticated": True})
-            return redirect(url_for("admin_users"))
-        if request.is_json:
-            return jsonify({"error": "Invalid admin credentials"}), 401
-        return render_template("admin_login.html", error_msg="Invalid admin credentials")
-    if session.get("is_admin"):
-        return redirect(url_for("admin_users"))
-    return render_template("admin_login.html", error_msg=None)
+    return redirect(url_for("login_page"))
 
 
 @app.post("/api/admin/login")
@@ -68,26 +52,26 @@ def admin_api_login():
 
 
 @app.post("/api/admin/logout")
-@admin_required
+@auth_client.admin_required
 def admin_api_logout():
-    session.pop("is_admin", None)
+    session.clear()
     return jsonify({"authenticated": False})
 
 
 @app.get("/api/admin/me")
-@admin_required
+@auth_client.admin_required
 def admin_api_me():
     return jsonify({"authenticated": True})
 
 
 @app.get("/admin")
-@admin_required
+@auth_client.admin_required
 def admin_users():
     return render_template("admin_users.html", users=get_admin_users())
 
 
 @app.get("/admin/user/<int:user_id>")
-@admin_required
+@auth_client.admin_required
 def admin_user_detail(user_id):
     user = get_admin_user(user_id)
     if user is None:
@@ -107,65 +91,52 @@ def admin_user_detail(user_id):
     )
 
 
-@app.post("/admin/user/<int:user_id>/delete")
-@admin_required
-def admin_delete_user(user_id):
-    delete_user_account(user_id)
-    return redirect(url_for("admin_users"))
-
-
 @app.route("/", methods=["GET"])
 @app.route("/login_page", methods=["GET"])
-@app.route("/login", methods=["GET"])
+@app.route("/login", methods=["GET", "POST"])
 def login_page():
     if session.get("user_id"):
         return redirect(url_for("main_web"))
-    return render_template("login_motify.html", error_msg=None)
 
-
-@app.route("/login", methods=["POST"])
-def login_post():
-    email = request.form.get("login_email_html", "").strip()
-    password = request.form.get("login_password_html", "")
-    action = request.form.get("action_html")
-
-    if action == 'login':
-        authorized, user_id, user_email = modules.login(email, password)
-        if authorized:
-            session["username"] = user_email
-            session["user_id"] = user_id
-            session["encrypted_text"] = ""
-            session["input_text"] = ""
+    error_msg = None
+    if request.method == "POST":
+        user = auth_client.authenticate(
+            request.form.get("email", ""),
+            request.form.get("password", ""),
+        )
+        if user:
+            auth_client.establish_session(user)
             return redirect(url_for("main_web"))
+        error_msg = auth_client.LOGIN_ERROR
+    return render_template(
+        "login_motify.html",
+        error_msg=error_msg,
+        auth_signup_url=os.environ.get(
+            "AUTH_SIGNUP_URL", "https://auth-service-kaef.onrender.com/signup"
+        ),
+        auth_reset_url=os.environ.get(
+            "AUTH_RESET_URL", "https://auth-service-kaef.onrender.com/forgot-password"
+        ),
+    )
 
-    return render_template("login_motify.html", error_msg="Invalid email or password")
+
+@app.get("/logout")
+def logout():
+    auth_client.logout_session()
+    return redirect(url_for("login_page"))
 
 
 @app.route("/signin", methods=["GET"])
 @app.route("/signup_page", methods=["GET"])
 @app.route("/sigin", methods=["GET"])
 def signin_page():
-    if session.get("user_id"):
-        return redirect(url_for("main_web"))
-    return render_template("signin_motify.html")
+    return redirect(os.environ.get(
+        "AUTH_SIGNUP_URL", "https://auth-service-kaef.onrender.com/signup"
+    ))
 
-
-@app.route("/signin", methods=["POST"])
-def signin_post():
-    email = request.form.get("signup_email_html", "").strip()
-    password = request.form.get("signup_password_html", "")
-    action = request.form.get("action_html")
-
-    error_msg = None
-    if action == 'signup':
-        success, message = modules.signup(email, password)
-        if success:
-            return redirect(url_for("login_page"))
-        error_msg = message
-
-    return render_template("signin_motify.html", error_msg=error_msg)
 
 @app.route("/contacts", methods=["GET"])
+@auth_client.auth_required
 def send():
     user_id = session.get("user_id")
     if not user_id:
@@ -178,6 +149,7 @@ def send():
 
 
 @app.route("/receive_files", methods=["GET"])
+@auth_client.auth_required
 def receive_files():
     user_id = session.get("user_id")
 
@@ -215,6 +187,7 @@ def receive_files():
 
 
 @app.route("/main_web", methods=["GET", "POST"])
+@auth_client.auth_required
 def main_web():
     if "user_id" not in session:
         return redirect(url_for("login_page"))
@@ -247,8 +220,7 @@ def main_web():
         contact_name = request.form.get('contact_name')
 
         if logout_button == 'logout':
-            session.clear()
-            return redirect(url_for("login_page"))
+            return redirect(url_for("logout"))
 
         password_encrypt_value = None
         if password_encrypt.strip():
