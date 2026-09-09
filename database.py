@@ -24,10 +24,11 @@ def connect_db():
         )
     else:
         return psycopg2.connect(
-            host="localhost",
-            database="encrypt_text_web_db",
-            user="postgres",
-            password="12345678",
+            host=os.environ.get("DB_HOST", "localhost"),
+            port=os.environ.get("DB_PORT", "5432"),
+            database=os.environ.get("DB_NAME", "encrypt_text_web_db"),
+            user=os.environ.get("DB_USER", "postgres"),
+            password=os.environ.get("DB_PASSWORD"),
             cursor_factory=RealDictCursor,
         )
 
@@ -35,17 +36,6 @@ def connect_db():
 def init_db():
     with connect_db() as conn:
         with conn.cursor() as cursor:
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS users (
-                    id SERIAL PRIMARY KEY,
-                    email TEXT UNIQUE NOT NULL,
-                    password_hash TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-                """
-            )
-
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS received_files (
@@ -101,6 +91,17 @@ def fetch_user(email):
     return fetch_one("SELECT * FROM users WHERE email = ?", (email,))
 
 
+def fetch_login_user(email):
+    return fetch_one(
+        """
+        SELECT id, email, password_hash, is_verified
+        FROM users
+        WHERE email = ?
+        """,
+        (email,),
+    )
+
+
 def get_admin_users():
     return fetch_all(
         "SELECT id, email, created_at FROM users ORDER BY created_at DESC, id DESC"
@@ -143,21 +144,6 @@ def count_admin_user_files(user_id):
         (user_id, user_id),
     )
     return int(row["total"] if row else 0)
-
-
-def delete_user_account(user_id):
-    with connect_db() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(
-                "DELETE FROM received_files WHERE sender_id = %s OR receiver_id = %s",
-                (user_id, user_id),
-            )
-            cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
-        conn.commit()
-
-
-def insert_user(data):
-    execute_query("INSERT INTO users (email, password_hash) VALUES (?, ?)", data)
 
 
 def get_contacts(user_id):
