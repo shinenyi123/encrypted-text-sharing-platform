@@ -101,12 +101,12 @@ def normalize_email(value):
 
 @app.route("/", methods=["GET"])
 @app.route("/login_page", methods=["GET"])
-@app.route("/login", methods=["GET", "POST"])
+@app.route("/api/login", methods=["GET", "POST"])
 def api_login():
     if session.get("user_id"):
         return redirect(url_for("main_web"))
 
-    else:
+    else:  
         data = request.get_json() or {}
         email = normalize_email(data.get('email'))
         password = data.get('password', '')
@@ -114,7 +114,7 @@ def api_login():
         if not email or not password:
             return jsonify({"error": "Invalid email or password."}), 401
 
-        user = database.get_user_by_email(email)
+        user = get_user_by_email(email)
         if (not user or not user.get('is_verified') or
                 not check_password_hash(user['password_hash'], password)):
             return jsonify({"error": "Invalid email or password."}), 401
