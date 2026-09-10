@@ -2,6 +2,7 @@ import os
 from flask import Flask, abort, redirect, render_template, request, session, url_for, jsonify
 from dotenv import load_dotenv
 from flask_session import Session
+from werkzeug.security import check_password_hash
 
 load_dotenv()
 
@@ -22,6 +23,7 @@ from database import (
     get_admin_user,
     get_admin_user_files,
     count_admin_user_files,
+    get_user_by_email,
 )
 
 app = Flask(__name__, template_folder="templates")
@@ -90,34 +92,39 @@ def admin_user_detail(user_id):
         total_pages=max(1, (total + per_page - 1) // per_page),
     )
 
+def normalize_email(value):
+    email = (value or '').strip().lower()
+    if len(email) > 254 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+        return None
+    return email
+
 
 @app.route("/", methods=["GET"])
 @app.route("/login_page", methods=["GET"])
 @app.route("/login", methods=["GET", "POST"])
-def login_page():
+def api_login():
     if session.get("user_id"):
         return redirect(url_for("main_web"))
 
-    error_msg = None
-    if request.method == "POST":
-        user = auth_client.authenticate(
-            request.form.get("email", ""),
-            request.form.get("password", ""),
-        )
-        if user:
-            auth_client.establish_session(user)
-            return redirect(url_for("main_web"))
-        error_msg = auth_client.LOGIN_ERROR
-    return render_template(
-        "login_motify.html",
-        error_msg=error_msg,
-        auth_signup_url=os.environ.get(
-            "AUTH_SIGNUP_URL", "https://auth-service-kaef.onrender.com/signup"
-        ),
-        auth_reset_url=os.environ.get(
-            "AUTH_RESET_URL", "https://auth-service-kaef.onrender.com/forgot-password"
-        ),
-    )
+    else:
+        data = request.get_json() or {}
+        email = normalize_email(data.get('email'))
+        password = data.get('password', '')
+
+        if not email or not password:
+            return jsonify({"error": "Invalid email or password."}), 401
+
+        user = database.get_user_by_email(email)
+        if (not user or not user.get('is_verified') or
+                not check_password_hash(user['password_hash'], password)):
+            return jsonify({"error": "Invalid email or password."}), 401
+
+        session.clear()
+        session['user_id'] = user['id']
+        session['user_email'] = user['email']
+
+        return jsonify({"message": "Login successful", "user_id": user['id'], "email": user['email']}), 200
+
 
 
 @app.get("/logout")
