@@ -1,4 +1,5 @@
 import os
+import re
 from flask import Flask, abort, redirect, render_template, request, session, url_for, jsonify
 from dotenv import load_dotenv
 from flask_session import Session
@@ -99,31 +100,37 @@ def normalize_email(value):
     return email
 
 
-@app.route("/", methods=["GET"])
-@app.route("/login_page", methods=["GET"])
-@app.route("/api/login", methods=["GET", "POST"])
+@app.get("/")
+@app.get("/login_page")
+@app.get("/login")
+def login_page():
+    if session.get("user_id"):
+        return redirect(url_for("main_web"))
+    return render_template("login_motify.html")
+
+
+@app.post("/api/login")
 def api_login():
     if session.get("user_id"):
         return redirect(url_for("main_web"))
 
-    else:  
-        data = request.get_json() or {}
-        email = normalize_email(data.get('email'))
-        password = data.get('password', '')
+    data = request.get_json(silent=True) or {}
+    email = normalize_email(data.get('email'))
+    password = data.get('password', '')
 
-        if not email or not password:
-            return jsonify({"error": "Invalid email or password."}), 401
+    if not email or not password:
+        return jsonify({"error": "Invalid email or password."}), 401
 
-        user = get_user_by_email(email)
-        if (not user or not user.get('is_verified') or
-                not check_password_hash(user['password_hash'], password)):
-            return jsonify({"error": "Invalid email or password."}), 401
+    user = get_user_by_email(email)
+    if (not user or not user.get('is_verified') or
+            not check_password_hash(user['password_hash'], password)):
+        return jsonify({"error": "Invalid email or password."}), 401
 
-        session.clear()
-        session['user_id'] = user['id']
-        session['user_email'] = user['email']
+    session.clear()
+    session['user_id'] = user['id']
+    session['username'] = user['email']
 
-        return jsonify({"message": "Login successful", "user_id": user['id'], "email": user['email']}), 200
+    return jsonify({"message": "Login successful", "user_id": user['id'], "email": user['email']}), 200
 
 
 
