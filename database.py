@@ -1,9 +1,72 @@
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
+import json
+import sqlite3
+from datetime import datetime, date
 
+# Try importing psycopg2 for PostgreSQL
+try:
+    import psycopg2
+    import psycopg2.extras
+    PSYCOPG2_AVAILABLE = True
+except ImportError:
+    PSYCOPG2_AVAILABLE = False
+
+# Database Config from Environment
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
+DB_HOST = os.environ.get("DB_HOST", "localhost")
+DB_NAME = os.environ.get("DB_NAME", "habit_tracker_db")
+DB_USER = os.environ.get("DB_USER", "postgres")
+DB_PASS = os.environ.get("DB_PASS", "")
+DB_PORT = os.environ.get("DB_PORT", "5432")
+
+# If DATABASE_URL is present, we force PostgreSQL usage.
+USE_POSTGRES = bool(DATABASE_URL) or (os.environ.get("USE_POSTGRES", "false").lower() == "true" and PSYCOPG2_AVAILABLE)
+
+SQLITE_DB_PATH = os.path.join(os.path.dirname(__file__), "habit_tracker.db")
+
+
+def get_db():
+    """Connect to PostgreSQL (Production/Local) or fallback to SQLite (Local only)."""
+    
+    # 1. Production PostgreSQL via DATABASE_URL
+    if DATABASE_URL:
+        if not PSYCOPG2_AVAILABLE:
+            raise RuntimeError("DATABASE_URL is set but psycopg2 is not installed.")
+        try:
+            conn = psycopg2.connect(
+                DATABASE_URL, 
+                cursor_factory=psycopg2.extras.RealDictCursor
+            )
+            return conn, "postgres"
+        except Exception as e:
+            # Raise exception immediately. DO NOT fall back to SQLite.
+            # Masking full URL in logs to prevent password leak.
+            print(f"[Database] CRITICAL: Production PostgreSQL connection failed. Error: {e}")
+            raise Exception("Failed to connect to production database. Check deployment logs.")
+
+    # 2. Local PostgreSQL via DB_ environment variables
+    if USE_POSTGRES:
+        try:
+            conn = psycopg2.connect(
+                host=DB_HOST,
+                dbname=DB_NAME,
+                user=DB_USER,
+                password=DB_PASS,
+                port=DB_PORT,
+                cursor_factory=psycopg2.extras.RealDictCursor
+            )
+            return conn, "postgres"
+        except Exception as e:
+            print(f"[Database] CRITICAL: Local PostgreSQL connection failed. Error: {e}")
+            raise Exception("Failed to connect to local PostgreSQL database. No SQLite fallback permitted when USE_POSTGRES is true.")
+
+    # 3. Local SQLite Fallback (Only if explicitly not using Postgres)
+    conn = sqlite3.connect(SQLITE_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn, "sqlite"
 
 def _normalize_row(row, cursor=None):
     if row is None:
@@ -100,6 +163,25 @@ def fetch_login_user(email):
         """,
         (email,),
     )
+
+def get_user_by_email(email):
+    """Fetch the verified identity record from the Auth Service users table."""
+    conn, db_type = get_db()
+    cursor = conn.cursor()
+
+    try:
+        placeholder = "%s" if db_type == "postgres" else "?"
+        cursor.execute(
+            f'SELECT id, email, password_hash, is_verified FROM users WHERE email = {placeholder};',
+            (email,)
+        )
+        row = cursor.fetchone()
+        if row and db_type == "sqlite":
+            row = dict(row)
+        return row
+    finally:
+        cursor.close()
+        conn.close()
 
 
 def get_admin_users():
