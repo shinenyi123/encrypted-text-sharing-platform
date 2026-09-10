@@ -313,75 +313,41 @@
     </div>
     <script src="/static/js/auth.js"></script>
     <script>
-        document
-            .addEventListener(
-                "DOMContentLoaded",
-                () => {
-                    document
-                        .getElementById("loginForm")
-                        .addEventListener(
-                            "submit",
-                            async (event) => {
-                                event.preventDefault();
-                                const email =
-                                    document
-                                        .getElementById("email")
-                                        .value
-                                        .trim();
-                                const password =
-                                    document
-                                        .getElementById("password")
-                                        .value;
-                                const errorMessage =
-                                    document
-                                        .getElementById("errorMessage");
-                                if (!email || !password) {
-                                    errorMessage.textContent =
-                                        "Please fill in all fields.";
-                                    return;
-                                }
-                                try {
-                                    errorMessage.textContent = "";
-                                    const response =
-                                        await fetch(
-                                            "/api/login",
-                                            {
-                                                method: "POST",
-                                                headers: {
-                                                    "Content-Type":
-                                                        "application/json"
-                                                },
-                                                body:
-                                                    JSON.stringify({
-                                                        email,
-                                                        password
-                                                    })
-                                            });
-                                    const data =
-                                        await response.json();
-                                    if (response.ok) {
-                                        Auth.saveSession(
-                                            data.user_id,
-                                            email
-                                        );
-                                        window.location.href = "/";
-                                        return;
-                                    }
-                                    errorMessage.textContent =
-                                        data.error ||
-                                        data.message ||
-                                        "Invalid credentials.";
-                                }
-                                catch (error) {
-                                    console.error(
-                                        "Login error:",
-                                        error
-                                    );
-                                    errorMessage.textContent =
-                                        "Failed to connect to server.";
-                                }
-                            });
-                });
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("loginForm").addEventListener("submit", async (event) => {
+                event.preventDefault();
+
+                const email = document.getElementById("email").value.trim();
+                const password = document.getElementById("password").value;
+                const errorMessage = document.getElementById("errorMessage");
+
+                if (!email || !password) {
+                    errorMessage.textContent = "Please fill in all fields.";
+                    return;
+                }
+
+                try {
+                    errorMessage.textContent = "";
+                    const response = await fetch("/api/login", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ email, password })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        window.location.href = "/";
+                        return;
+                    }
+
+                    errorMessage.textContent = data.error || data.message || "Invalid credentials.";
+                } catch (error) {
+                    console.error("Login error:", error);
+                    errorMessage.textContent = "Failed to connect to the server.";
+                }
+            });
+        });
     </script>
 </body>
 
