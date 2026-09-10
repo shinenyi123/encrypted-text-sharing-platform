@@ -11,7 +11,6 @@ async function handleLogin(event) {
     }
 
     try {
-        errorMessage.innerText = "";
         const response = await fetch("/api/login", {
             method: "POST",
             credentials: "include",
@@ -24,7 +23,6 @@ async function handleLogin(event) {
         const data = await response.json();
 
         if (response.ok) {
-            Auth.clearLocalSession();
             window.location.href = "/";
         } else {
             errorMessage.innerText = data.error || data.message || "Invalid credentials.";
