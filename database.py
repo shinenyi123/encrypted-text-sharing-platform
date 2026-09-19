@@ -81,41 +81,79 @@ def _normalize_row(row, cursor=None):
 
 def connect_db():
     if DATABASE_URL:
-        return psycopg2.connect(
-            DATABASE_URL,
-            cursor_factory=RealDictCursor,
-        )
-    else:
-        return psycopg2.connect(
-            host=os.environ.get("DB_HOST", "localhost"),
-            port=os.environ.get("DB_PORT", "5432"),
-            database=os.environ.get("DB_NAME", "encrypt_text_web_db"),
-            user=os.environ.get("DB_USER", "postgres"),
-            password=os.environ.get("DB_PASSWORD"),
-            cursor_factory=RealDictCursor,
-        )
+        try:
+            return psycopg2.connect(
+                DATABASE_URL,
+                cursor_factory=RealDictCursor,
+            )
+        except Exception:
+            pass
+
+    use_postgres = os.environ.get("USE_POSTGRES", "false").lower() == "true"
+    if use_postgres:
+        try:
+            return psycopg2.connect(
+                host=os.environ.get("DB_HOST", "localhost"),
+                port=os.environ.get("DB_PORT", "5432"),
+                database=os.environ.get("DB_NAME", "encrypt_text_web_db"),
+                user=os.environ.get("DB_USER", "postgres"),
+                password=os.environ.get("DB_PASSWORD"),
+                cursor_factory=RealDictCursor,
+            )
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(SQLITE_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
 def init_db():
     with connect_db() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(
+        if conn.__class__.__module__.startswith("sqlite3"):
+            conn.execute(
                 """
-                CREATE TABLE IF NOT EXISTS received_files (
-                id SERIAL PRIMARY KEY,
-                receiver_id INTEGER NOT NULL,
-                sender_id INTEGER NOT NULL,
-                file_name TEXT NOT NULL,
-                encrypted_content TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-                UNIQUE(sender_id, receiver_id, file_name),
-
-                FOREIGN KEY(receiver_id) REFERENCES users(id) ON DELETE CASCADE,
-                FOREIGN KEY(sender_id) REFERENCES users(id) ON DELETE CASCADE
-            );
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email TEXT UNIQUE NOT NULL,
+                    password_hash TEXT,
+                    is_verified INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS received_files (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    receiver_id INTEGER NOT NULL,
+                    sender_id INTEGER NOT NULL,
+                    file_name TEXT NOT NULL,
+                    encrypted_content TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(sender_id, receiver_id, file_name)
+                )
+                """
+            )
+        else:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS received_files (
+                    id SERIAL PRIMARY KEY,
+                    receiver_id INTEGER NOT NULL,
+                    sender_id INTEGER NOT NULL,
+                    file_name TEXT NOT NULL,
+                    encrypted_content TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                    UNIQUE(sender_id, receiver_id, file_name),
+
+                    FOREIGN KEY(receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY(sender_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                    """
+                )
         conn.commit()
 
 
