@@ -46,12 +46,34 @@ Session(app)
 
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
-    return redirect(url_for("login_page"))
+    if request.method == "POST":
+        data = request.form or request.get_json(silent=True) or {}
+        username = (data.get("email") or data.get("username") or "").strip()
+        password = data.get("password", "")
+        if not auth_client.is_valid_admin_login(username, password):
+            return jsonify({"error": "Invalid admin credentials."}), 401
+        session.clear()
+        session["user_id"] = -1
+        session["username"] = username.lower()
+        session["is_admin"] = True
+        return redirect(url_for("admin_users"))
+    return render_template("login_motify.html")
 
 
 @app.post("/api/admin/login")
 def admin_api_login():
-    return admin_login()
+    data = request.get_json(silent=True) or {}
+    username = (data.get("email") or data.get("username") or "").strip()
+    password = data.get("password", "")
+
+    if not auth_client.is_valid_admin_login(username, password):
+        return jsonify({"error": "Invalid admin credentials."}), 401
+
+    session.clear()
+    session["user_id"] = -1
+    session["username"] = username.lower()
+    session["is_admin"] = True
+    return jsonify({"authenticated": True, "user": session["username"]})
 
 
 @app.post("/api/admin/logout")
